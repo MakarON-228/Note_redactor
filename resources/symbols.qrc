@@ -1,0 +1,18 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="assets/svg/whole_note.svg">../assets/svg/whole_note.svg</file>
+        <file alias="assets/svg/half_note.svg">../assets/svg/half_note.svg</file>
+        <file alias="assets/svg/quarter_note.svg">../assets/svg/quarter_note.svg</file>
+        <file alias="assets/svg/eighth_note.svg">../assets/svg/eighth_note.svg</file>
+        <file alias="assets/svg/sixteenth_note.svg">../assets/svg/sixteenth_note.svg</file>
+        <file alias="assets/svg/treble_clef.svg">../assets/svg/treble_clef.svg</file>
+        <file alias="assets/svg/whole_rest.svg">../assets/svg/whole_rest.svg</file>
+        <file alias="assets/svg/half_rest.svg">../assets/svg/half_rest.svg</file>
+        <file alias="assets/svg/quarter_rest.svg">../assets/svg/quarter_rest.svg</file>
+        <file alias="assets/svg/eighth_rest.svg">../assets/svg/eighth_rest.svg</file>
+        <file alias="assets/svg/sixteenth_rest.svg">../assets/svg/sixteenth_rest.svg</file>
+        <file alias="assets/svg/sharp.svg">../assets/svg/sharp.svg</file>
+        <file alias="assets/svg/flat.svg">../assets/svg/flat.svg</file>
+        <file alias="assets/svg/beccare.svg">../assets/svg/beccare.svg</file>
+    </qresource>
+</RCC>
