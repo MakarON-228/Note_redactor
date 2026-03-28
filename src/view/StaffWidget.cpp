@@ -3,6 +3,7 @@
 #include "../model/BarLine.h"
 #include "../model/GlyphSymbol.h"
 #include "../model/TimeSignature.h"
+#include "../model/Dot.h"
 
 #include <cmath>
 #include <QKeyEvent>
@@ -20,6 +21,8 @@
 #include <QInputDialog>
 #include <QFontMetricsF>
 #include <ctime>
+#include <memory>
+#include <qnamespace.h>
 
 namespace {
 constexpr int kStaffFirstTopY = 90;
@@ -179,6 +182,10 @@ void StaffWidget::moveSelectedNoteUp() {
         glyph->setStaffStep(glyph->staffStep() + 1);
         update();
     }
+    if (auto dot = std::dynamic_pointer_cast<Dot>(m_selectedSymbol)) {
+        dot->setStaffStep(dot->staffStep() + 1);
+        update();
+    }
 }
 
 void StaffWidget::moveSelectedNoteDown() {
@@ -192,6 +199,10 @@ void StaffWidget::moveSelectedNoteDown() {
             return; // Clef is fixed and auto-inserted.
         }
         glyph->setStaffStep(glyph->staffStep() - 1);
+        update();
+    }
+    if (auto dot = std::dynamic_pointer_cast<Dot>(m_selectedSymbol)) {
+        dot->setStaffStep(dot->staffStep() - 1);
         update();
     }
 }
@@ -212,6 +223,11 @@ void StaffWidget::moveSelectedNoteLeft() {
     }
     if (auto barLine = std::dynamic_pointer_cast<BarLine>(m_selectedSymbol)) {
         barLine->setXSlot(barLine->xSlot() - 1);
+        update();
+        return;
+    }
+    if (auto dot = std::dynamic_pointer_cast<Dot>(m_selectedSymbol)) {
+        dot->setXSlot(dot->xSlot() - 1);
         update();
         return;
     }
@@ -237,6 +253,11 @@ void StaffWidget::moveSelectedNoteRight() {
     }
     if (auto barLine = std::dynamic_pointer_cast<BarLine>(m_selectedSymbol)) {
         barLine->setXSlot(barLine->xSlot() + 1);
+        update();
+        return;
+    }
+    if (auto dot = std::dynamic_pointer_cast<Dot>(m_selectedSymbol)) {
+        dot->setXSlot(dot->xSlot() + 1);
         update();
         return;
     }
@@ -293,6 +314,7 @@ void StaffWidget::mousePressEvent(QMouseEvent* event) {
     auto hitNote = m_score.noteAt(slot, staffIndex, step, 0, 1);
     auto hitGlyph = m_score.glyphAt(slot, staffIndex, step, 0, 1);
     auto hitBarLine = m_score.barLineAt(slot, staffIndex, 0);
+    auto hitDot = m_score.dotAt(slot, staffIndex, step, 0, 1);
     auto hitTimeSignature = m_score.timeSignatureAt(slot, staffIndex, 1);
 
     switch (m_currentTool) {
@@ -323,6 +345,11 @@ void StaffWidget::mousePressEvent(QMouseEvent* event) {
         break;
     case ToolType::InsertBarLine:
         m_selectedSymbol = m_score.addBarLine(slot, staffIndex);
+        m_selectedNote.reset();
+        update();
+        break;
+    case ToolType::InsertDot:
+        m_selectedSymbol = m_score.addDot(slot, staffIndex, step);
         m_selectedNote.reset();
         update();
         break;
@@ -474,6 +501,9 @@ void StaffWidget::mousePressEvent(QMouseEvent* event) {
         } else if (hitBarLine) {
             m_selectedSymbol = hitBarLine;
             m_selectedNote.reset();
+        } else if (hitDot) {
+            m_selectedSymbol = hitDot;
+            m_selectedNote.reset();
         } else if (hitTimeSignature) {
             m_selectedSymbol = hitTimeSignature;
             m_selectedNote.reset();
@@ -489,6 +519,7 @@ void StaffWidget::mousePressEvent(QMouseEvent* event) {
             bool removed = false;
             removed = removed || m_score.removeNoteAt(slot, staffIndex, step, 0, 1);
             removed = removed || m_score.removeBarLineAt(slot, staffIndex, 0);
+            removed = removed || m_score.removeDotAt(slot, staffIndex, step, 0, 1);
             removed = removed || m_score.removeTimeSignatureAt(slot, staffIndex, 1);
             if (auto hit = m_score.glyphAt(slot, staffIndex, step, 0, 1)) {
                 if (hit->type() != MusicSymbol::SymbolType::TrebleClef) {
@@ -528,6 +559,8 @@ void StaffWidget::mouseMoveEvent(QMouseEvent* event) {
         glyph->setStaffStep(yToStaffStep(newStaffIndex, y));
     } else if (auto barLine = std::dynamic_pointer_cast<BarLine>(m_selectedSymbol)) {
         barLine->setXSlot(newSlot);
+    } else if (auto dot = std::dynamic_pointer_cast<Dot>(m_selectedSymbol)) {
+        dot->setXSlot(newSlot);
     } else if (auto timeSig = std::dynamic_pointer_cast<TimeSignature>(m_selectedSymbol)) {
         timeSig->setXSlot(newSlot);
     }
@@ -745,6 +778,29 @@ void StaffWidget::drawSymbols(QPainter& painter) {
             continue;
         }
 
+        auto dot = std::dynamic_pointer_cast<Dot>(symbol);
+        if (dot) {
+            QPen pen(Qt::black, 2);
+            if (m_selectedSymbol == dot) {
+                pen.setColor(QColor(20, 90, 220));
+            }
+
+            const int x = slotToX(dot->xSlot());
+            const int staffIndex = dot->staffIndex();
+            const int y = staffStepToY(staffIndex, dot->staffStep());
+
+            const QRectF targetRect(
+                x + 8,
+                y - 3,
+                6,
+                6);
+            
+            painter.setBrush(QBrush(Qt::black, Qt::SolidPattern));
+            painter.setPen(pen); 
+            painter.drawEllipse(targetRect);
+            continue;
+        }
+
         auto timeSig = std::dynamic_pointer_cast<TimeSignature>(symbol);
         if (timeSig) {
             const int x = slotToX(timeSig->xSlot());
@@ -954,6 +1010,16 @@ QByteArray StaffWidget::toJson() const {
             continue;
         }
 
+        if (auto dot = std::dynamic_pointer_cast<Dot>(symbol)) {
+            QJsonObject obj;
+            obj["kind"] = "dot";
+            obj["xSlot"] = dot->xSlot();
+            obj["staffIndex"] = dot->staffIndex();
+            obj["staffStep"] = dot->staffStep();
+            symbols.push_back(obj);
+            continue;
+        }
+
         if (auto ts = std::dynamic_pointer_cast<TimeSignature>(symbol)) {
             QJsonObject obj;
             obj["kind"] = "timesig";
@@ -1015,6 +1081,11 @@ bool StaffWidget::fromJson(const QByteArray& jsonData) {
             const int xSlot = obj.value("xSlot").toInt();
             const int staffIndex = obj.value("staffIndex").toInt();
             m_score.addBarLine(xSlot, staffIndex);
+        } else if (kind == "dot") {
+            const int xSlot = obj.value("xSlot").toInt();
+            const int staffIndex = obj.value("staffIndex").toInt();
+            const int staffStep = obj.value("staffStep").toInt();
+            m_score.addDot(xSlot, staffIndex, staffStep);
         } else if (kind == "timesig") {
             const int xSlot = obj.value("xSlot").toInt();
             const int staffIndex = obj.value("staffIndex").toInt();

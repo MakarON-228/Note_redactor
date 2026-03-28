@@ -34,6 +34,7 @@ SymbolPaletteWidget::SymbolPaletteWidget(QWidget* parent)
         {"Flat", ToolType::InsertFlat},
         {"Beccare", ToolType::InsertBeccare},
         {"Bar line", ToolType::InsertBarLine},
+        {"Dot", ToolType::InsertDot},
         {"Time signature", ToolType::InsertTimeSignature},
         {"Eraser", ToolType::Eraser},
     };

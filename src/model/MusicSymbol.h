@@ -10,7 +10,8 @@ public:
         Flat,
         Beccare,
         BarLine,
-        TimeSignature
+        TimeSignature,
+        Dot
     };
 
     explicit MusicSymbol(SymbolType symbolType) : m_type(symbolType) {}

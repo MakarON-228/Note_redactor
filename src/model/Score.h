@@ -5,6 +5,7 @@
 #include "GlyphSymbol.h"
 #include "Note.h"
 #include "TimeSignature.h"
+#include "Dot.h"
 
 #include <QVector>
 #include <memory>
@@ -21,6 +22,9 @@ public:
     std::shared_ptr<BarLine> addBarLine(int xSlot, int staffIndex);
     std::shared_ptr<BarLine> addBarLine(int xSlot);
 
+    std::shared_ptr<Dot> addDot(int xSlot, int staffIndex, int staffStep);
+    std::shared_ptr<Dot> addDot(int xSlot, int staffStep);
+
     std::shared_ptr<GlyphSymbol> addGlyph(MusicSymbol::SymbolType type, int xSlot, int staffIndex, int staffStep);
     std::shared_ptr<GlyphSymbol> addGlyph(MusicSymbol::SymbolType type, int xSlot, int staffStep);
     std::shared_ptr<GlyphSymbol> addGlyph(MusicSymbol::SymbolType type, int xSlot, int staffIndex, int staffStep, Note::Duration restDuration);
@@ -35,6 +39,9 @@ public:
     bool removeBarLineAt(int xSlot, int staffIndex, int slotTolerance = 0);
     bool removeBarLineAt(int xSlot, int slotTolerance = 0);
 
+    bool removeDotAt(int xSlot, int staffIndex, int staffStep, int slotTolerance = 0, int stepTolerance = 0);
+    bool removeDotAt(int xSlot, int staffStep, int slotTolerance = 0, int stepTolerance = 0);
+
     bool removeTimeSignatureAt(int xSlot, int staffIndex, int slotTolerance = 0);
     bool removeTimeSignatureAt(int xSlot, int slotTolerance = 0);
     bool removeSymbol(const std::shared_ptr<MusicSymbol>& symbol);
@@ -44,6 +51,9 @@ public:
 
     std::shared_ptr<BarLine> barLineAt(int xSlot, int staffIndex, int slotTolerance = 0);
     std::shared_ptr<BarLine> barLineAt(int xSlot, int slotTolerance = 0);
+
+    std::shared_ptr<Dot> dotAt(int xSlot, int staffIndex, int staffStep, int slotTolerance = 0, int stepTolerance = 0);
+    std::shared_ptr<Dot> dotAt(int xSlot, int staffStep, int slotTolerance = 0, int stepTolerance = 0);
 
     std::shared_ptr<TimeSignature> timeSignatureAt(int xSlot, int staffIndex, int slotTolerance = 0);
     std::shared_ptr<TimeSignature> timeSignatureAt(int xSlot, int slotTolerance = 0);

@@ -32,6 +32,16 @@ std::shared_ptr<BarLine> Score::addBarLine(int xSlot) {
     return addBarLine(xSlot, 0);
 }
 
+std::shared_ptr<Dot> Score::addDot(int xSlot, int staffIndex, int staffStep) {
+    auto dot = std::make_shared<Dot>(xSlot, staffIndex, staffStep);
+    m_symbols.push_back(dot);
+    return dot;
+}
+
+std::shared_ptr<Dot> Score::addDot(int xSlot, int staffStep) {
+    return addDot(xSlot, 0, staffStep);
+}
+
 std::shared_ptr<TimeSignature> Score::addTimeSignature(int xSlot, int staffIndex, int numerator, int denominator) {
     auto ts = std::make_shared<TimeSignature>(xSlot, staffIndex, numerator, denominator);
     m_symbols.push_back(ts);
@@ -105,6 +115,29 @@ bool Score::removeBarLineAt(int xSlot, int staffIndex, int slotTolerance) {
 
 bool Score::removeBarLineAt(int xSlot, int slotTolerance) {
     return removeBarLineAt(xSlot, 0, slotTolerance);
+}
+
+bool Score::removeDotAt(int xSlot, int staffIndex, int staffStep, int slotTolerance, int stepTolerance) {
+    for (int i = 0; i < m_symbols.size(); ++i) {
+        auto dot = std::dynamic_pointer_cast<Dot>(m_symbols[i]);
+        if (!dot) {
+            continue;
+        }
+
+        const bool inSlotRange = std::abs(dot->xSlot() - xSlot) <= slotTolerance;
+        const bool inStaffIndex = dot->staffIndex() == staffIndex;
+        const bool inStepRange = std::abs(dot->staffStep() - staffStep) <= stepTolerance;
+        if (inSlotRange && inStaffIndex && inStepRange) {
+            m_symbols.remove(i);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Score::removeDotAt(int xSlot, int staffStep, int slotTolerance, int stepTolerance) {
+    return removeDotAt(xSlot, 0, staffStep, slotTolerance, stepTolerance);
 }
 
 bool Score::removeTimeSignatureAt(int xSlot, int staffIndex, int slotTolerance) {
@@ -183,6 +216,28 @@ std::shared_ptr<BarLine> Score::barLineAt(int xSlot, int staffIndex, int slotTol
 
 std::shared_ptr<BarLine> Score::barLineAt(int xSlot, int slotTolerance) {
     return barLineAt(xSlot, 0, slotTolerance);
+}
+
+std::shared_ptr<Dot> Score::dotAt(int xSlot, int staffIndex, int staffStep, int slotTolerance, int stepTolerance) {
+    for (int i = m_symbols.size() - 1; i >= 0; --i) {
+        auto dot = std::dynamic_pointer_cast<Dot>(m_symbols[i]);
+        if (!dot) {
+            continue;
+        }
+
+        const bool inSlotRange = std::abs(dot->xSlot() - xSlot) <= slotTolerance;
+        const bool inStaffIndex = dot->staffIndex() == staffIndex;
+        const bool inStepRange = std::abs(dot->staffStep() - staffStep) <= stepTolerance;
+        if (inSlotRange && inStaffIndex && inStepRange) {
+            return dot;
+        }
+    }
+
+    return {};
+}
+
+std::shared_ptr<Dot> Score::dotAt(int xSlot, int staffStep, int slotTolerance, int stepTolerance) {
+    return dotAt(xSlot, 0, staffStep, slotTolerance, stepTolerance);
 }
 
 std::shared_ptr<TimeSignature> Score::timeSignatureAt(int xSlot, int staffIndex, int slotTolerance) {

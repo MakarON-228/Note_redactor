@@ -19,5 +19,6 @@ enum class ToolType {
     InsertBeccare,
     InsertBarLine,
     InsertTimeSignature,
+    InsertDot,
     Eraser
 };
