@@ -25,6 +25,7 @@ SymbolPaletteWidget::SymbolPaletteWidget(QWidget* parent)
         {"Quarter note", ToolType::InsertQuarterNote},
         {"Eighth note", ToolType::InsertEighthNote},
         {"Sixteenth note", ToolType::InsertSixteenthNote},
+        {"Undefined note", ToolType::InsertUndefinedNote},
         {"Whole rest", ToolType::InsertWholeRest},
         {"Half rest", ToolType::InsertHalfRest},
         {"Quarter rest", ToolType::InsertQuarterRest},

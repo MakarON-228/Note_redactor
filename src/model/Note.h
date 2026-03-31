@@ -27,7 +27,8 @@ public:
         Half,
         Quarter,
         Eighth,
-        Sixteenth
+        Sixteenth,
+        Undefined
     };
 
     Note(int xSlot, int staffIndex, int staffStep, Duration duration);

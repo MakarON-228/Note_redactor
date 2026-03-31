@@ -54,6 +54,8 @@ double noteRectHForDuration(Note::Duration d) {
         return 60.0;
     case Note::Duration::Sixteenth:
         return 60.0;
+    case Note::Duration::Undefined:
+        return kNoteHeight;
     default:
         return kNoteHeight;
     }
@@ -71,6 +73,8 @@ double noteRectYFactor(Note::Duration d) {
         return 0.85;
     case Note::Duration::Sixteenth:
         return 0.85;
+    case Note::Duration::Undefined:
+        return 0.5;
     default:
         return 0.5;
     }
@@ -88,6 +92,8 @@ const char* svgResourceForNoteDuration(Note::Duration duration) {
         return ":/assets/svg/eighth_note.svg";
     case Note::Duration::Sixteenth:
         return ":/assets/svg/sixteenth_note.svg";
+    case Note::Duration::Undefined:
+        return ":/assets/svg/undefined_note.svg";
     default:
         return ":/assets/svg/whole_note.svg";
     }
@@ -343,6 +349,11 @@ void StaffWidget::mousePressEvent(QMouseEvent* event) {
         m_selectedSymbol = m_selectedNote;
         update();
         break;
+    case ToolType::InsertUndefinedNote:
+        m_selectedNote = m_score.addNote(insertSlot, staffIndex, step, Note::Duration::Undefined);
+        m_selectedSymbol = m_selectedNote;
+        update();
+        break;
     case ToolType::InsertBarLine:
         m_selectedSymbol = m_score.addBarLine(slot, staffIndex);
         m_selectedNote.reset();
@@ -488,6 +499,19 @@ void StaffWidget::mousePressEvent(QMouseEvent* event) {
     
     case ToolType::Select:
         if (hitNote) {
+            if (hitNote->duration() == Note::Duration::Undefined) {
+                QStringList items;
+                items << "Whole" << "Half" << "Quarter" << "Eighth" << "Sixteenth";
+                bool ok;
+                QString item = QInputDialog::getItem(this, "Select Duration", "Duration:", items, 0, false, &ok);
+                if (ok && !item.isEmpty()) {
+                    if (item == "Whole") hitNote->setDuration(Note::Duration::Whole);
+                    else if (item == "Half") hitNote->setDuration(Note::Duration::Half);
+                    else if (item == "Quarter") hitNote->setDuration(Note::Duration::Quarter);
+                    else if (item == "Eighth") hitNote->setDuration(Note::Duration::Eighth);
+                    else if (item == "Sixteenth") hitNote->setDuration(Note::Duration::Sixteenth);
+                }
+            }
             m_selectedSymbol = hitNote;
             m_selectedNote = hitNote;
         } else if (hitGlyph) {

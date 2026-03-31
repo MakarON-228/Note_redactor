@@ -7,6 +7,7 @@ enum class ToolType {
     InsertQuarterNote,
     InsertEighthNote,
     InsertSixteenthNote,
+    InsertUndefinedNote,
     InsertTrebleClef,
     InsertRest,
     InsertWholeRest,

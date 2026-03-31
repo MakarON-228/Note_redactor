@@ -5,6 +5,7 @@
         <file alias="assets/svg/quarter_note.svg">../assets/svg/quarter_note.svg</file>
         <file alias="assets/svg/eighth_note.svg">../assets/svg/eighth_note.svg</file>
         <file alias="assets/svg/sixteenth_note.svg">../assets/svg/sixteenth_note.svg</file>
+        <file alias="assets/svg/undefined_note.svg">../assets/svg/undefined_note.svg</file>
         <file alias="assets/svg/treble_clef.svg">../assets/svg/treble_clef.svg</file>
         <file alias="assets/svg/whole_rest.svg">../assets/svg/whole_rest.svg</file>
         <file alias="assets/svg/half_rest.svg">../assets/svg/half_rest.svg</file>
