@@ -7,7 +7,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets Svg)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Svg Multimedia)
 
 add_executable(NoteRedactor
     src/main.cpp
@@ -26,7 +26,11 @@ add_executable(NoteRedactor
     src/view/SymbolPaletteWidget.cpp
     src/view/StaffWidget.h
     src/view/StaffWidget.cpp
+    src/audio/AudioRecorder.h
+    src/audio/AudioRecorder.cpp
+    src/audio/PitchDetector.h
+    src/audio/PitchDetector.cpp
     resources/symbols.qrc
 )
 
-target_link_libraries(NoteRedactor PRIVATE Qt6::Widgets Qt6::Svg)
+target_link_libraries(NoteRedactor PRIVATE Qt6::Widgets Qt6::Svg Qt6::Multimedia)

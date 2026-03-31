@@ -274,30 +274,86 @@ void StaffWidget::moveSelectedNoteRight() {
 }
 
 void StaffWidget::deleteSelectedNote() {
-    if (m_selectedNote) {
-        m_score.removeNoteAt(
-            m_selectedNote->xSlot(),
-            m_selectedNote->staffIndex(),
-            m_selectedNote->staffStep(),
-            0,
-            0
-        );
-        m_selectedSymbol.reset();
-        m_selectedNote.reset();
-        update();
-        return;
-    }
     if (m_selectedSymbol) {
-        if (m_selectedSymbol->type() == MusicSymbol::SymbolType::TrebleClef) {
-            return; // Clef is fixed and auto-inserted.
-        }
         m_score.removeSymbol(m_selectedSymbol);
         m_selectedSymbol.reset();
+        m_selectedNote.reset();
         update();
     }
 }
 
-void StaffWidget::paintEvent(QPaintEvent* /*event*/) {
+void StaffWidget::addNoteFromMidi(int midiNote) {
+    // MIDI note 60 is C4.
+    // In our system, C4 is step 0 on the treble clef (assuming standard treble clef where C4 is one ledger line below).
+    // Actually, standard treble clef: E4 is bottom line (step 2). D4 is space below (step 1). C4 is ledger line below (step 0).
+    // Let's map MIDI note to step.
+    // C4 = 60 -> step 0
+    // D4 = 62 -> step 1
+    // E4 = 64 -> step 2
+    // F4 = 65 -> step 3
+    // G4 = 67 -> step 4
+    // A4 = 69 -> step 5
+    // B4 = 71 -> step 6
+    // C5 = 72 -> step 7
+    
+    // A simple mapping for natural notes (ignoring accidentals for now)
+    int step = 0;
+    int octave = (midiNote / 12) - 1;
+    int noteInOctave = midiNote % 12;
+    
+    int baseStep = 0;
+    switch (noteInOctave) {
+        case 0: baseStep = 0; break; // C
+        case 2: baseStep = 1; break; // D
+        case 4: baseStep = 2; break; // E
+        case 5: baseStep = 3; break; // F
+        case 7: baseStep = 4; break; // G
+        case 9: baseStep = 5; break; // A
+        case 11: baseStep = 6; break; // B
+        default: return; // Ignore sharps/flats for simplicity in this basic version
+    }
+    
+    step = baseStep + (octave - 4) * 7 - 2; // Shift down by 2 steps
+    
+    // Find the rightmost slot used in the score
+    int maxSlot = 0;
+    int targetStaffIndex = 0;
+    
+    // First find the highest staff index
+    for (const auto& symbol : m_score.symbols()) {
+        if (auto note = std::dynamic_pointer_cast<Note>(symbol)) {
+            if (note->staffIndex() > targetStaffIndex) {
+                targetStaffIndex = note->staffIndex();
+            }
+        }
+    }
+    
+    // Then find the max slot on that staff
+    for (const auto& symbol : m_score.symbols()) {
+        if (auto note = std::dynamic_pointer_cast<Note>(symbol)) {
+            if (note->staffIndex() == targetStaffIndex && note->xSlot() > maxSlot) {
+                maxSlot = note->xSlot();
+            }
+        }
+    }
+    
+    // Add some spacing
+    int newSlot = maxSlot + 2; // Closer spacing
+    
+    // If we go too far right, move to the next staff
+    if (slotToX(newSlot) > width() - 50) {
+        newSlot = 4;
+        targetStaffIndex++;
+        if (targetStaffIndex >= m_staffCount) {
+            addStaffRow();
+        }
+    }
+    
+    m_score.addNote(newSlot, targetStaffIndex, step, Note::Duration::Undefined);
+    update();
+}
+
+void StaffWidget::paintEvent(QPaintEvent* event) {
     QPainter painter(this);
     render(painter, width(), height());
 }

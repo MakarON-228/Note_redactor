@@ -32,6 +32,7 @@ public slots:
     void moveSelectedNoteLeft();
     void moveSelectedNoteRight();
     void deleteSelectedNote();
+    void addNoteFromMidi(int midiNote);
 
 protected:
     void paintEvent(QPaintEvent* event) override;

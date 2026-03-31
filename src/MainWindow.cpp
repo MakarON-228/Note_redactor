@@ -2,6 +2,7 @@
 
 #include "view/StaffWidget.h"
 #include "view/SymbolPaletteWidget.h"
+#include "audio/AudioRecorder.h"
 
 #include <QHBoxLayout>
 #include <QFile>
@@ -12,16 +13,17 @@
 #include <QScrollArea>
 
 MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent) {
+    : QMainWindow(parent),
+      m_staffWidget(new StaffWidget()),
+      m_audioRecorder(std::make_unique<AudioRecorder>(this)) {
     auto* central = new QWidget(this);
     auto* rootLayout = new QVBoxLayout(central);
     rootLayout->setContentsMargins(8, 8, 8, 8);
     rootLayout->setSpacing(8);
 
     auto* palette = new SymbolPaletteWidget(central);
-    auto* staff = new StaffWidget();
     auto* scrollArea = new QScrollArea(central);
-    scrollArea->setWidget(staff);
+    scrollArea->setWidget(m_staffWidget);
     scrollArea->setWidgetResizable(true);
     scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
@@ -35,6 +37,8 @@ MainWindow::MainWindow(QWidget* parent)
     auto* exportPdfButton = new QPushButton("Export PDF", central);
     auto* saveJsonButton = new QPushButton("Save JSON", central);
     auto* loadJsonButton = new QPushButton("Load JSON", central);
+    m_recordButton = new QPushButton("Start Recording", central);
+    
     controlsRow->addWidget(upButton);
     controlsRow->addWidget(downButton);
     controlsRow->addWidget(deleteButton);
@@ -43,6 +47,7 @@ MainWindow::MainWindow(QWidget* parent)
     controlsRow->addWidget(exportPdfButton);
     controlsRow->addWidget(saveJsonButton);
     controlsRow->addWidget(loadJsonButton);
+    controlsRow->addWidget(m_recordButton);
     controlsRow->addStretch(1);
 
     rootLayout->addWidget(palette);
@@ -54,75 +59,62 @@ MainWindow::MainWindow(QWidget* parent)
     resize(1400, 500);
     setFixedWidth(1400);
 
-    connect(palette, &SymbolPaletteWidget::toolChanged, staff, &StaffWidget::setTool);
-    connect(upButton, &QPushButton::clicked, staff, &StaffWidget::moveSelectedNoteUp);
-    connect(downButton, &QPushButton::clicked, staff, &StaffWidget::moveSelectedNoteDown);
-    connect(deleteButton, &QPushButton::clicked, staff, &StaffWidget::deleteSelectedNote);
-    connect(addStaffButton, &QPushButton::clicked, staff, &StaffWidget::addStaffRow);
+    connect(palette, &SymbolPaletteWidget::toolChanged, m_staffWidget, &StaffWidget::setTool);
+    connect(upButton, &QPushButton::clicked, m_staffWidget, &StaffWidget::moveSelectedNoteUp);
+    connect(downButton, &QPushButton::clicked, m_staffWidget, &StaffWidget::moveSelectedNoteDown);
+    connect(deleteButton, &QPushButton::clicked, m_staffWidget, &StaffWidget::deleteSelectedNote);
+    connect(addStaffButton, &QPushButton::clicked, m_staffWidget, &StaffWidget::addStaffRow);
 
-    connect(exportPngButton, &QPushButton::clicked, this, [staff]() {
-        const QString path = QFileDialog::getSaveFileName(
-            nullptr,
-            "Export staff as PNG",
-            "staff.png",
-            "PNG files (*.png)"
-        );
-        if (path.isEmpty()) {
-            return;
+    connect(exportPngButton, &QPushButton::clicked, this, [this]() {
+        QString filePath = QFileDialog::getSaveFileName(this, "Export PNG", "", "PNG Images (*.png)");
+        if (!filePath.isEmpty()) {
+            m_staffWidget->exportToPng(filePath);
         }
-        staff->exportToPng(path);
     });
 
-    connect(exportPdfButton, &QPushButton::clicked, this, [staff]() {
-        const QString path = QFileDialog::getSaveFileName(
-            nullptr,
-            "Export staff as PDF",
-            "staff.pdf",
-            "PDF files (*.pdf)"
-        );
-        if (path.isEmpty()) {
-            return;
+    connect(exportPdfButton, &QPushButton::clicked, this, [this]() {
+        QString filePath = QFileDialog::getSaveFileName(this, "Export PDF", "", "PDF Documents (*.pdf)");
+        if (!filePath.isEmpty()) {
+            m_staffWidget->exportToPdf(filePath);
         }
-        staff->exportToPdf(path);
     });
 
-    connect(saveJsonButton, &QPushButton::clicked, this, [staff]() {
-        const QString path = QFileDialog::getSaveFileName(
-            nullptr,
-            "Save score as JSON",
-            "score.json",
-            "JSON files (*.json)"
-        );
-        if (path.isEmpty()) {
-            return;
+    connect(saveJsonButton, &QPushButton::clicked, this, [this]() {
+        QString filePath = QFileDialog::getSaveFileName(this, "Save JSON", "", "JSON Files (*.json)");
+        if (!filePath.isEmpty()) {
+            QFile file(filePath);
+            if (file.open(QIODevice::WriteOnly)) {
+                file.write(m_staffWidget->toJson());
+            }
         }
-
-        QFile file(path);
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-            return;
-        }
-        file.write(staff->toJson());
-        file.close();
     });
 
-    connect(loadJsonButton, &QPushButton::clicked, this, [staff]() {
-        const QString path = QFileDialog::getOpenFileName(
-            nullptr,
-            "Load score from JSON",
-            "",
-            "JSON files (*.json)"
-        );
-        if (path.isEmpty()) {
-            return;
+    connect(loadJsonButton, &QPushButton::clicked, this, [this]() {
+        QString filePath = QFileDialog::getOpenFileName(this, "Load JSON", "", "JSON Files (*.json)");
+        if (!filePath.isEmpty()) {
+            QFile file(filePath);
+            if (file.open(QIODevice::ReadOnly)) {
+                m_staffWidget->fromJson(file.readAll());
+            }
         }
-
-        QFile file(path);
-        if (!file.open(QIODevice::ReadOnly)) {
-            return;
-        }
-        const QByteArray data = file.readAll();
-        file.close();
-
-        staff->fromJson(data);
     });
+
+    connect(m_recordButton, &QPushButton::clicked, this, &MainWindow::toggleRecording);
+    connect(m_audioRecorder.get(), &AudioRecorder::noteDetected, this, &MainWindow::onNoteDetected);
+}
+
+MainWindow::~MainWindow() = default;
+
+void MainWindow::toggleRecording() {
+    if (m_audioRecorder->isRecording()) {
+        m_audioRecorder->stopRecording();
+        m_recordButton->setText("Start Recording");
+    } else {
+        m_audioRecorder->startRecording();
+        m_recordButton->setText("Stop Recording");
+    }
+}
+
+void MainWindow::onNoteDetected(int midiNote) {
+    m_staffWidget->addNoteFromMidi(midiNote);
 }
