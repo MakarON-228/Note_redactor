@@ -41,6 +41,7 @@ constexpr int kTimeSigBoxWidthPx = 40;
 constexpr int kTimeSigFontSizeMinPt = 6;
 constexpr int kTimeSigFontSizeMaxPt = 60;
 constexpr int kTimeSigBarLenPx = 20;
+constexpr int kRightStaffBorder = 50;
 
 double noteRectHForDuration(Note::Duration d) {
     switch (d) {
@@ -177,99 +178,132 @@ void StaffWidget::addStaffRow() {
 
 void StaffWidget::moveSelectedNoteUp() {
     if (m_selectedNote) {
-        m_selectedNote->moveVertical(1);
-        update();
+        if (m_selectedNote->staffStep() < kStaffTopStep + 6) {
+            m_selectedNote->moveVertical(1);
+            update();
+        }
         return;
     }
     if (auto glyph = std::dynamic_pointer_cast<GlyphSymbol>(m_selectedSymbol)) {
         if (glyph->type() == MusicSymbol::SymbolType::TrebleClef) {
             return; // Clef is fixed and auto-inserted.
         }
-        glyph->setStaffStep(glyph->staffStep() + 1);
-        update();
+        if (glyph->staffStep() < kStaffTopStep + 6) {
+            glyph->setStaffStep(glyph->staffStep() + 1);
+            update();
+        }
     }
     if (auto dot = std::dynamic_pointer_cast<Dot>(m_selectedSymbol)) {
-        dot->setStaffStep(dot->staffStep() + 1);
-        update();
+        if (dot->staffStep() < kStaffTopStep + 6) {
+            dot->setStaffStep(dot->staffStep() + 1);
+            update();
+        }
     }
 }
 
 void StaffWidget::moveSelectedNoteDown() {
     if (m_selectedNote) {
-        m_selectedNote->moveVertical(-1);
-        update();
+        if (m_selectedNote->staffStep() > -6) {
+            m_selectedNote->moveVertical(-1);
+            update();
+        }
         return;
     }
     if (auto glyph = std::dynamic_pointer_cast<GlyphSymbol>(m_selectedSymbol)) {
         if (glyph->type() == MusicSymbol::SymbolType::TrebleClef) {
             return; // Clef is fixed and auto-inserted.
         }
-        glyph->setStaffStep(glyph->staffStep() - 1);
-        update();
+        if (glyph->staffStep() > -6) {
+            glyph->setStaffStep(glyph->staffStep() - 1);
+            update();
+        }
     }
     if (auto dot = std::dynamic_pointer_cast<Dot>(m_selectedSymbol)) {
-        dot->setStaffStep(dot->staffStep() - 1);
-        update();
+        if (dot->staffStep() > -6) {
+            dot->setStaffStep(dot->staffStep() - 1);
+            update();
+        }
     }
 }
 
 void StaffWidget::moveSelectedNoteLeft() {
     if (m_selectedNote) {
-        m_selectedNote->moveHorizontal(-1);
-        update();
+        if (m_selectedNote->xSlot() > kDefaultTrebleClefSlot + 1) {
+            m_selectedNote->moveHorizontal(-1);
+            update();
+        }
         return;
     }
     if (auto glyph = std::dynamic_pointer_cast<GlyphSymbol>(m_selectedSymbol)) {
         if (glyph->type() == MusicSymbol::SymbolType::TrebleClef) {
             return; // Clef is fixed and auto-inserted.
         }
-        glyph->setXSlot(glyph->xSlot() - 1);
-        update();
+        if (glyph->xSlot() > kDefaultTrebleClefSlot + 1) {
+            glyph->setXSlot(glyph->xSlot() - 1);
+            update();
+        }
         return;
     }
     if (auto barLine = std::dynamic_pointer_cast<BarLine>(m_selectedSymbol)) {
-        barLine->setXSlot(barLine->xSlot() - 1);
-        update();
+        if (barLine->xSlot() > kDefaultTrebleClefSlot + 1) {
+            barLine->setXSlot(barLine->xSlot() - 1);
+            update();
+        }
         return;
     }
     if (auto dot = std::dynamic_pointer_cast<Dot>(m_selectedSymbol)) {
-        dot->setXSlot(dot->xSlot() - 1);
-        update();
+        if (dot->xSlot() > kDefaultTrebleClefSlot + 1) {
+            dot->setXSlot(dot->xSlot() - 1);
+            update();
+        }
         return;
     }
     if (auto timeSig = std::dynamic_pointer_cast<TimeSignature>(m_selectedSymbol)) {
-        timeSig->setXSlot(timeSig->xSlot() - 1);
-        update();
+        if (timeSig->xSlot() > kDefaultTrebleClefSlot + 1) {
+            timeSig->setXSlot(timeSig->xSlot() - 1);
+            update();
+        }
     }
 }
 
 void StaffWidget::moveSelectedNoteRight() {
+    const int maxSlot = xToSlot(width() - kRightStaffBorder);
     if (m_selectedNote) {
-        m_selectedNote->moveHorizontal(1);
-        update();
+        if (m_selectedNote->xSlot() < maxSlot) {
+            m_selectedNote->moveHorizontal(1);
+            update();
+        }
         return;
     }
     if (auto glyph = std::dynamic_pointer_cast<GlyphSymbol>(m_selectedSymbol)) {
         if (glyph->type() == MusicSymbol::SymbolType::TrebleClef) {
             return; // Clef is fixed and auto-inserted.
         }
-        glyph->setXSlot(glyph->xSlot() + 1);
-        update();
+        if (glyph->xSlot() < maxSlot) {
+            glyph->setXSlot(glyph->xSlot() + 1);
+            update();
+        }
         return;
     }
     if (auto barLine = std::dynamic_pointer_cast<BarLine>(m_selectedSymbol)) {
-        barLine->setXSlot(barLine->xSlot() + 1);
-        update();
+        if (barLine->xSlot() < maxSlot) {
+            barLine->setXSlot(barLine->xSlot() + 1);
+            update();
+        }
         return;
     }
     if (auto dot = std::dynamic_pointer_cast<Dot>(m_selectedSymbol)) {
-        dot->setXSlot(dot->xSlot() + 1);
-        update();
+        if (dot->xSlot() < maxSlot) {
+            dot->setXSlot(dot->xSlot() + 1);
+            update();
+        }
         return;
     }
     if (auto timeSig = std::dynamic_pointer_cast<TimeSignature>(m_selectedSymbol)) {
-        timeSig->setXSlot(timeSig->xSlot() + 1);
-        update();
+        if (timeSig->xSlot() < maxSlot) {
+            timeSig->setXSlot(timeSig->xSlot() + 1);
+            update();
+        }
     }
 }
 
@@ -370,9 +404,10 @@ void StaffWidget::mousePressEvent(QMouseEvent* event) {
     setFocus();
 
     const int slot = xToSlot(event->position().x());
-    const int insertSlot = qMax(slot, kDefaultTrebleClefSlot + 1);
+    const int maxSlot = xToSlot(width() - kRightStaffBorder);
+    const int insertSlot = qMin(qMax(slot, kDefaultTrebleClefSlot + 1), maxSlot);
     const int staffIndex = yToStaffIndex(event->position().y());
-    const int step = yToStaffStep(staffIndex, event->position().y());
+    const int step = qMin(qMax(yToStaffStep(staffIndex, event->position().y()), -6), kStaffTopStep + 6);
     auto hitNote = m_score.noteAt(slot, staffIndex, step, 0, 1);
     auto hitGlyph = m_score.glyphAt(slot, staffIndex, step, 0, 1);
     auto hitBarLine = m_score.barLineAt(slot, staffIndex, 0);
@@ -628,19 +663,33 @@ void StaffWidget::mouseMoveEvent(QMouseEvent* event) {
         return;
     }
 
-    const int newSlot = xToSlot(event->position().x());
+    int newSlot = xToSlot(event->position().x());
+    newSlot = qMax(newSlot, kDefaultTrebleClefSlot + 1); // Prevent moving left of the clef
+    
+    // Prevent moving past the right edge of the staff
+    const int maxSlot = xToSlot(width() - kRightStaffBorder);
+    newSlot = qMin(newSlot, maxSlot);
+
     if (auto note = std::dynamic_pointer_cast<Note>(m_selectedSymbol)) {
         note->setXSlot(newSlot);
+        const int y = event->position().y();
+        const int newStaffIndex = yToStaffIndex(y);
+        note->setStaffIndex(newStaffIndex);
+        note->setStaffStep(qMin(qMax(yToStaffStep(newStaffIndex, y), -6), kStaffTopStep + 6));
     } else if (auto glyph = std::dynamic_pointer_cast<GlyphSymbol>(m_selectedSymbol)) {
         glyph->setXSlot(newSlot);
         const int y = event->position().y();
         const int newStaffIndex = yToStaffIndex(y);
         glyph->setStaffIndex(newStaffIndex);
-        glyph->setStaffStep(yToStaffStep(newStaffIndex, y));
+        glyph->setStaffStep(qMin(qMax(yToStaffStep(newStaffIndex, y), -6), kStaffTopStep + 6));
     } else if (auto barLine = std::dynamic_pointer_cast<BarLine>(m_selectedSymbol)) {
         barLine->setXSlot(newSlot);
     } else if (auto dot = std::dynamic_pointer_cast<Dot>(m_selectedSymbol)) {
         dot->setXSlot(newSlot);
+        const int y = event->position().y();
+        const int newStaffIndex = yToStaffIndex(y);
+        dot->setStaffIndex(newStaffIndex);
+        dot->setStaffStep(qMin(qMax(yToStaffStep(newStaffIndex, y), -6), kStaffTopStep + 6));
     } else if (auto timeSig = std::dynamic_pointer_cast<TimeSignature>(m_selectedSymbol)) {
         timeSig->setXSlot(newSlot);
     }
@@ -752,8 +801,21 @@ void StaffWidget::drawSymbols(QPainter& painter) {
                 rectH);
             const char* path = svgResourceForNoteDuration(note->duration());
             QSvgRenderer renderer(QString::fromUtf8(path));
+            bool shouldFlip = (note->staffStep() > 4) && 
+                                  (note->duration() != Note::Duration::Whole) && 
+                                  (note->duration() != Note::Duration::Undefined);
             if (renderer.isValid()) {
                 painter.save();
+                
+                if (shouldFlip) {
+
+                    QPointF noteHeadCenter(x, y);
+                    
+                    painter.translate(noteHeadCenter);
+                    painter.scale(1, -1);
+                    painter.translate(-noteHeadCenter);
+                    
+                }
                 painter.setClipRect(targetRect);
                 renderer.render(&painter, targetRect);
                 painter.restore();
@@ -765,7 +827,13 @@ void StaffWidget::drawSymbols(QPainter& painter) {
             if (m_selectedSymbol == note) {
                 painter.setPen(QPen(QColor(20, 90, 220), 2, Qt::DashLine));
                 painter.setBrush(Qt::NoBrush);
-                painter.drawRect(targetRect.adjusted(-2, -2, 2, 2));
+                if (shouldFlip) {
+                    QRectF flippedRect = targetRect;
+                    flippedRect.translate(0, targetRect.height() - kNoteHeight * 1.5);
+                    painter.drawRect(flippedRect.adjusted(-2, -2, 2, 2));
+                } else {
+                    painter.drawRect(targetRect.adjusted(-2, -2, 2, 2));
+                }
             }
             continue;
         }
