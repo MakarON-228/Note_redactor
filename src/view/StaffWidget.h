@@ -33,6 +33,7 @@ public slots:
     void moveSelectedNoteRight();
     void deleteSelectedNote();
     void addNoteFromMidi(int midiNote);
+    void setSpacingCoefficient(int k);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -61,4 +62,5 @@ private:
     std::shared_ptr<Note> m_selectedNote;
     int m_staffCount;
     bool m_dragging;
+    int m_spacingK;
 };

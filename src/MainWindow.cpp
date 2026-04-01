@@ -11,6 +11,36 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QScrollArea>
+#include <QFrame>
+#include <QStyle>
+#include <QSpinBox>
+#include <QLabel>
+
+static QPushButton* makeCtrlButton(const QString& icon, const QString& text, QWidget* parent) {
+    auto* btn = new QPushButton(text, parent);
+    btn->setCursor(Qt::PointingHandCursor);
+    btn->setStyleSheet(
+        "QPushButton {"
+        "  background: #ffffff;"
+        "  color: #2c3e50;"
+        "  border: 1px solid #dcdfe6;"
+        "  border-radius: 6px;"
+        "  padding: 8px 14px;"
+        "  font-size: 12px;"
+        "  font-weight: 500;"
+        "}"
+        "QPushButton:hover {"
+        "  background: #ecf5ff;"
+        "  border-color: #409eff;"
+        "  color: #409eff;"
+        "}"
+        "QPushButton:pressed {"
+        "  background: #d9ecff;"
+        "  border-color: #337ecc;"
+        "}"
+    );
+    return btn;
+}
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
@@ -18,8 +48,8 @@ MainWindow::MainWindow(QWidget* parent)
       m_audioRecorder(std::make_unique<AudioRecorder>(this)) {
     auto* central = new QWidget(this);
     auto* rootLayout = new QVBoxLayout(central);
-    rootLayout->setContentsMargins(8, 8, 8, 8);
-    rootLayout->setSpacing(8);
+    rootLayout->setContentsMargins(0, 0, 0, 0);
+    rootLayout->setSpacing(0);
 
     auto* palette = new SymbolPaletteWidget(central);
     auto* scrollArea = new QScrollArea(central);
@@ -27,37 +57,136 @@ MainWindow::MainWindow(QWidget* parent)
     scrollArea->setWidgetResizable(true);
     scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    scrollArea->setStyleSheet("QScrollArea { border: none; background: #f8f9fa; }");
 
-    auto* controlsRow = new QHBoxLayout();
-    auto* upButton = new QPushButton("Move up", central);
-    auto* downButton = new QPushButton("Move down", central);
-    auto* deleteButton = new QPushButton("Delete selected", central);
-    auto* addStaffButton = new QPushButton("Add staff", central);
-    auto* exportPngButton = new QPushButton("Export PNG", central);
-    auto* exportPdfButton = new QPushButton("Export PDF", central);
-    auto* saveJsonButton = new QPushButton("Save JSON", central);
-    auto* loadJsonButton = new QPushButton("Load JSON", central);
-    m_recordButton = new QPushButton("Start Recording", central);
+    // Bottom control bar
+    auto* controlsFrame = new QFrame(central);
+    controlsFrame->setFrameStyle(QFrame::StyledPanel);
+    controlsFrame->setFixedHeight(56);
+    controlsFrame->setStyleSheet(
+        "QFrame {"
+        "  background: #ffffff;"
+        "  border-top: 1px solid #e4e7ed;"
+        "}"
+    );
+    auto* controlsRow = new QHBoxLayout(controlsFrame);
+    controlsRow->setContentsMargins(16, 8, 16, 8);
+    controlsRow->setSpacing(8);
+
+    auto* upButton = makeCtrlButton("↑", "Move Up", controlsFrame);
+    auto* downButton = makeCtrlButton("↓", "Move Down", controlsFrame);
+    auto* deleteButton = makeCtrlButton("✕", "Delete", controlsFrame);
+    auto* addStaffButton = makeCtrlButton("+", "Add Staff", controlsFrame);
     
     controlsRow->addWidget(upButton);
     controlsRow->addWidget(downButton);
     controlsRow->addWidget(deleteButton);
     controlsRow->addWidget(addStaffButton);
+    controlsRow->addSpacing(16);
+
+    auto* exportPngButton = makeCtrlButton("🖼", "Export PNG", controlsFrame);
+    auto* exportPdfButton = makeCtrlButton("📄", "Export PDF", controlsFrame);
+    auto* saveJsonButton = makeCtrlButton("💾", "Save", controlsFrame);
+    auto* loadJsonButton = makeCtrlButton("📂", "Load", controlsFrame);
+    
     controlsRow->addWidget(exportPngButton);
     controlsRow->addWidget(exportPdfButton);
     controlsRow->addWidget(saveJsonButton);
     controlsRow->addWidget(loadJsonButton);
-    controlsRow->addWidget(m_recordButton);
     controlsRow->addStretch(1);
+
+    // Spacing control group
+    auto* spacingLayout = new QHBoxLayout();
+    spacingLayout->setContentsMargins(0, 0, 0, 0);
+    spacingLayout->setSpacing(4);
+
+    auto* spacingLabel = new QLabel("Staff spacing:", controlsFrame);
+    spacingLabel->setStyleSheet("color: #2c3e50; font-size: 12px; font-weight: 600;");
+
+    auto* spacingMinusBtn = new QPushButton("−", controlsFrame);
+    spacingMinusBtn->setFixedSize(28, 28);
+    spacingMinusBtn->setCursor(Qt::PointingHandCursor);
+    spacingMinusBtn->setStyleSheet(
+        "QPushButton {"
+        "  background: #ffffff;"
+        "  color: #2c3e50;"
+        "  border: 1px solid #b0bec5;"
+        "  border-radius: 4px;"
+        "  font-size: 16px;"
+        "  font-weight: 700;"
+        "}"
+        "QPushButton:hover { background: #ecf5ff; border-color: #409eff; color: #409eff; }"
+        "QPushButton:pressed { background: #d9ecff; }"
+    );
+
+    auto* spacingValueLabel = new QLabel("0", controlsFrame);
+    m_spacingValueLabel = spacingValueLabel;
+    spacingValueLabel->setStyleSheet("color: #2c3e50; font-size: 14px; font-weight: 600; min-width: 24px;");
+    spacingValueLabel->setAlignment(Qt::AlignCenter);
+
+    auto* spacingPlusBtn = new QPushButton("+", controlsFrame);
+    spacingPlusBtn->setFixedSize(28, 28);
+    spacingPlusBtn->setCursor(Qt::PointingHandCursor);
+    spacingPlusBtn->setStyleSheet(
+        "QPushButton {"
+        "  background: #ffffff;"
+        "  color: #2c3e50;"
+        "  border: 1px solid #b0bec5;"
+        "  border-radius: 4px;"
+        "  font-size: 16px;"
+        "  font-weight: 700;"
+        "}"
+        "QPushButton:hover { background: #ecf5ff; border-color: #409eff; color: #409eff; }"
+        "QPushButton:pressed { background: #d9ecff; }"
+    );
+
+    connect(spacingMinusBtn, &QPushButton::clicked, this, &MainWindow::onSpacingMinus);
+    connect(spacingPlusBtn, &QPushButton::clicked, this, &MainWindow::onSpacingPlus);
+
+    spacingLayout->addWidget(spacingLabel);
+    spacingLayout->addWidget(spacingMinusBtn);
+    spacingLayout->addWidget(spacingValueLabel);
+    spacingLayout->addWidget(spacingPlusBtn);
+    controlsRow->addLayout(spacingLayout);
+    controlsRow->addSpacing(16);
+
+    m_recordButton = new QPushButton("●  Start Recording", controlsFrame);
+    m_recordButton->setCursor(Qt::PointingHandCursor);
+    m_recordButton->setFixedHeight(36);
+    m_recordButton->setStyleSheet(
+        "QPushButton {"
+        "  background: #f56c6c;"
+        "  color: #ffffff;"
+        "  border: none;"
+        "  border-radius: 18px;"
+        "  padding: 0 20px;"
+        "  font-size: 13px;"
+        "  font-weight: 600;"
+        "}"
+        "QPushButton:hover {"
+        "  background: #f78989;"
+        "}"
+        "QPushButton:pressed {"
+        "  background: #e04e4e;"
+        "}"
+    );
+    controlsRow->addWidget(m_recordButton);
 
     rootLayout->addWidget(palette);
     rootLayout->addWidget(scrollArea, 1);
-    rootLayout->addLayout(controlsRow);
+    rootLayout->addWidget(controlsFrame);
 
     setCentralWidget(central);
-    setWindowTitle("Note redactor - Qt MVP");
+    setWindowTitle("Note Redactor");
     resize(1400, 500);
     setFixedWidth(1400);
+
+    // Apply global stylesheet
+    setStyleSheet(
+        "QMainWindow {"
+        "  background: #f8f9fa;"
+        "}"
+    );
 
     connect(palette, &SymbolPaletteWidget::toolChanged, m_staffWidget, &StaffWidget::setTool);
     connect(upButton, &QPushButton::clicked, m_staffWidget, &StaffWidget::moveSelectedNoteUp);
@@ -117,4 +246,16 @@ void MainWindow::toggleRecording() {
 
 void MainWindow::onNoteDetected(int midiNote) {
     m_staffWidget->addNoteFromMidi(midiNote);
+}
+
+void MainWindow::onSpacingMinus() {
+    m_spacingK = qBound(-4, m_spacingK - 1, 10);
+    m_spacingValueLabel->setText(QString::number(m_spacingK));
+    m_staffWidget->setSpacingCoefficient(m_spacingK);
+}
+
+void MainWindow::onSpacingPlus() {
+    m_spacingK = qBound(-4, m_spacingK + 1, 10);
+    m_spacingValueLabel->setText(QString::number(m_spacingK));
+    m_staffWidget->setSpacingCoefficient(m_spacingK);
 }

@@ -30,7 +30,7 @@ constexpr int kStaffLeftMargin = 70;
 constexpr int kLineSpacing = 16;
 constexpr int kHalfStepPx = kLineSpacing / 2;
 constexpr int kStaffLinesCount = 5;
-constexpr int kStaffRowPitch = 175; // расстояние между верхними линиями стана
+constexpr int kStaffRowPitchBase = 175; // расстояние между верхними линиями стана
 constexpr int kSlotWidth = 28;
 constexpr int kNoteWidth = 24;
 constexpr int kNoteHeight = 12;
@@ -42,6 +42,10 @@ constexpr int kTimeSigFontSizeMinPt = 6;
 constexpr int kTimeSigFontSizeMaxPt = 60;
 constexpr int kTimeSigBarLenPx = 20;
 constexpr int kRightStaffBorder = 50;
+constexpr int kLedgerLinesBorderBase = 6;
+
+inline int staffRowPitch(int k) { return kStaffRowPitchBase + 17 * k; }
+inline int ledgerLinesBorder(int k) { return kLedgerLinesBorderBase + k; }
 
 double noteRectHForDuration(Note::Duration d) {
     switch (d) {
@@ -137,7 +141,8 @@ StaffWidget::StaffWidget(QWidget* parent)
     : QWidget(parent),
       m_currentTool(ToolType::Select),
       m_staffCount(1),
-      m_dragging(false) {
+      m_dragging(false),
+      m_spacingK(0) {
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
 
@@ -152,7 +157,7 @@ StaffWidget::StaffWidget(QWidget* parent)
 
 QSize StaffWidget::minimumSizeHint() const {
     const int firstBottom = kStaffFirstTopY + (kStaffLinesCount - 1) * kLineSpacing;
-    const int lastTop = kStaffFirstTopY + (m_staffCount - 1) * kStaffRowPitch;
+    const int lastTop = kStaffFirstTopY + (m_staffCount - 1) * staffRowPitch(m_spacingK);
     const int lastBottom = lastTop + (kStaffLinesCount - 1) * kLineSpacing;
     const int paddingBottom = 120;
     return {1390, lastBottom + paddingBottom};
@@ -178,7 +183,7 @@ void StaffWidget::addStaffRow() {
 
 void StaffWidget::moveSelectedNoteUp() {
     if (m_selectedNote) {
-        if (m_selectedNote->staffStep() < kStaffTopStep + 6) {
+        if (m_selectedNote->staffStep() < kStaffTopStep + ledgerLinesBorder(m_spacingK)) {
             m_selectedNote->moveVertical(1);
             update();
         }
@@ -188,13 +193,13 @@ void StaffWidget::moveSelectedNoteUp() {
         if (glyph->type() == MusicSymbol::SymbolType::TrebleClef) {
             return; // Clef is fixed and auto-inserted.
         }
-        if (glyph->staffStep() < kStaffTopStep + 6) {
+        if (glyph->staffStep() < kStaffTopStep + ledgerLinesBorder(m_spacingK)) {
             glyph->setStaffStep(glyph->staffStep() + 1);
             update();
         }
     }
     if (auto dot = std::dynamic_pointer_cast<Dot>(m_selectedSymbol)) {
-        if (dot->staffStep() < kStaffTopStep + 6) {
+        if (dot->staffStep() < kStaffTopStep + ledgerLinesBorder(m_spacingK)) {
             dot->setStaffStep(dot->staffStep() + 1);
             update();
         }
@@ -203,7 +208,7 @@ void StaffWidget::moveSelectedNoteUp() {
 
 void StaffWidget::moveSelectedNoteDown() {
     if (m_selectedNote) {
-        if (m_selectedNote->staffStep() > -6) {
+        if (m_selectedNote->staffStep() > -ledgerLinesBorder(m_spacingK)) {
             m_selectedNote->moveVertical(-1);
             update();
         }
@@ -213,13 +218,13 @@ void StaffWidget::moveSelectedNoteDown() {
         if (glyph->type() == MusicSymbol::SymbolType::TrebleClef) {
             return; // Clef is fixed and auto-inserted.
         }
-        if (glyph->staffStep() > -6) {
+        if (glyph->staffStep() > -ledgerLinesBorder(m_spacingK)) {
             glyph->setStaffStep(glyph->staffStep() - 1);
             update();
         }
     }
     if (auto dot = std::dynamic_pointer_cast<Dot>(m_selectedSymbol)) {
-        if (dot->staffStep() > -6) {
+        if (dot->staffStep() > -ledgerLinesBorder(m_spacingK)) {
             dot->setStaffStep(dot->staffStep() - 1);
             update();
         }
@@ -316,6 +321,13 @@ void StaffWidget::deleteSelectedNote() {
     }
 }
 
+void StaffWidget::setSpacingCoefficient(int k) {
+    m_spacingK = k;
+    updateGeometry();
+    resize(sizeHint());
+    update();
+}
+
 void StaffWidget::addNoteFromMidi(int midiNote) {
     // MIDI note 60 is C4.
     // In our system, C4 is step 0 on the treble clef (assuming standard treble clef where C4 is one ledger line below).
@@ -407,7 +419,7 @@ void StaffWidget::mousePressEvent(QMouseEvent* event) {
     const int maxSlot = xToSlot(width() - kRightStaffBorder);
     const int insertSlot = qMin(qMax(slot, kDefaultTrebleClefSlot + 1), maxSlot);
     const int staffIndex = yToStaffIndex(event->position().y());
-    const int step = qMin(qMax(yToStaffStep(staffIndex, event->position().y()), -6), kStaffTopStep + 6);
+    const int step = qMin(qMax(yToStaffStep(staffIndex, event->position().y()), -ledgerLinesBorder(m_spacingK)), kStaffTopStep + ledgerLinesBorder(m_spacingK));
     auto hitNote = m_score.noteAt(slot, staffIndex, step, 0, 1);
     auto hitGlyph = m_score.glyphAt(slot, staffIndex, step, 0, 1);
     auto hitBarLine = m_score.barLineAt(slot, staffIndex, 0);
@@ -675,13 +687,13 @@ void StaffWidget::mouseMoveEvent(QMouseEvent* event) {
         const int y = event->position().y();
         const int newStaffIndex = yToStaffIndex(y);
         note->setStaffIndex(newStaffIndex);
-        note->setStaffStep(qMin(qMax(yToStaffStep(newStaffIndex, y), -6), kStaffTopStep + 6));
+        note->setStaffStep(qMin(qMax(yToStaffStep(newStaffIndex, y), -ledgerLinesBorder(m_spacingK)), kStaffTopStep + ledgerLinesBorder(m_spacingK)));
     } else if (auto glyph = std::dynamic_pointer_cast<GlyphSymbol>(m_selectedSymbol)) {
         glyph->setXSlot(newSlot);
         const int y = event->position().y();
         const int newStaffIndex = yToStaffIndex(y);
         glyph->setStaffIndex(newStaffIndex);
-        glyph->setStaffStep(qMin(qMax(yToStaffStep(newStaffIndex, y), -6), kStaffTopStep + 6));
+        glyph->setStaffStep(qMin(qMax(yToStaffStep(newStaffIndex, y), -ledgerLinesBorder(m_spacingK)), kStaffTopStep + ledgerLinesBorder(m_spacingK)));
     } else if (auto barLine = std::dynamic_pointer_cast<BarLine>(m_selectedSymbol)) {
         barLine->setXSlot(newSlot);
     } else if (auto dot = std::dynamic_pointer_cast<Dot>(m_selectedSymbol)) {
@@ -689,7 +701,7 @@ void StaffWidget::mouseMoveEvent(QMouseEvent* event) {
         const int y = event->position().y();
         const int newStaffIndex = yToStaffIndex(y);
         dot->setStaffIndex(newStaffIndex);
-        dot->setStaffStep(qMin(qMax(yToStaffStep(newStaffIndex, y), -6), kStaffTopStep + 6));
+        dot->setStaffStep(qMin(qMax(yToStaffStep(newStaffIndex, y), -ledgerLinesBorder(m_spacingK)), kStaffTopStep + ledgerLinesBorder(m_spacingK)));
     } else if (auto timeSig = std::dynamic_pointer_cast<TimeSignature>(m_selectedSymbol)) {
         timeSig->setXSlot(newSlot);
     }
@@ -736,7 +748,7 @@ void StaffWidget::keyPressEvent(QKeyEvent* event) {
 }
 
 int StaffWidget::staffTopY(int staffIndex) const {
-    return kStaffFirstTopY + staffIndex * kStaffRowPitch;
+    return kStaffFirstTopY + staffIndex * staffRowPitch(m_spacingK);
 }
 
 int StaffWidget::staffBottomY(int staffIndex) const {
@@ -753,7 +765,7 @@ int StaffWidget::yToStaffIndex(int y) const {
     }
 
     const int staffCenterY0 = kStaffFirstTopY + 2 * kLineSpacing;
-    const double exact = static_cast<double>(y - staffCenterY0) / kStaffRowPitch;
+    const double exact = static_cast<double>(y - staffCenterY0) / staffRowPitch(m_spacingK);
     const int idx = static_cast<int>(std::lround(exact));
     return qBound(0, idx, m_staffCount - 1);
 }
@@ -1121,6 +1133,7 @@ bool StaffWidget::exportToPdf(const QString& filePath) {
 QByteArray StaffWidget::toJson() const {
     QJsonObject root;
     root["staffCount"] = m_staffCount;
+    root["spacingK"] = m_spacingK;
 
     QJsonArray symbols;
     for (const auto& symbol : m_score.symbols()) {
@@ -1193,6 +1206,7 @@ bool StaffWidget::fromJson(const QByteArray& jsonData) {
 
     const QJsonObject root = doc.object();
     m_staffCount = root.value("staffCount").toInt(1);
+    m_spacingK = root.value("spacingK").toInt(0);
     m_score = Score(); // clear existing symbols
     m_selectedSymbol.reset();
     m_selectedNote.reset();
