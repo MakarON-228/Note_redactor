@@ -6,6 +6,8 @@
 #include <QWidget>
 #include <QByteArray>
 #include <QString>
+#include <QPixmap>
+#include <map>
 #include <memory>
 
 class StaffWidget : public QWidget {
@@ -33,6 +35,7 @@ public slots:
     void moveSelectedNoteRight();
     void deleteSelectedNote();
     void addNoteFromMidi(int midiNote);
+    void addQuickSymbol(int digit);
     void setSpacingCoefficient(int k);
 
 protected:
@@ -55,6 +58,8 @@ private:
     void drawStaff(QPainter& painter, int renderWidth);
     void drawSymbols(QPainter& painter);
     void drawLedgerLinesForStep(QPainter& painter, int x, int staffIndex, int step);
+    QPixmap getCachedSvgPixmap(const QString& svgPath, const QSizeF& size);
+    void clearSvgCache();
 
     ToolType m_currentTool;
     Score m_score;
@@ -63,4 +68,13 @@ private:
     int m_staffCount;
     bool m_dragging;
     int m_spacingK;
+
+    // cursor-based insertion point for quick keyboard entries:
+    int m_cursorSlot;
+    int m_cursorStaffIndex;
+    int m_cursorStep;
+    bool m_cursorValid;
+    
+    // SVG pixmap cache: key = "path:widthxheight"
+    std::map<QString, QPixmap> m_svgCache;
 };

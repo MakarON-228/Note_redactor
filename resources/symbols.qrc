@@ -15,5 +15,8 @@
         <file alias="assets/svg/sharp.svg">../assets/svg/sharp.svg</file>
         <file alias="assets/svg/flat.svg">../assets/svg/flat.svg</file>
         <file alias="assets/svg/beccare.svg">../assets/svg/beccare.svg</file>
+        <file alias="assets/svg/quarter_note_with_dot.svg">../assets/svg/quarter_note_with_dot.svg</file>
+        <file alias="assets/svg/barline.svg">../assets/svg/barline.svg</file>
+        <file alias="assets/svg/eraser.svg">../assets/svg/eraser.svg</file>
     </qresource>
 </RCC>

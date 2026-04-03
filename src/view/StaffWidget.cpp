@@ -142,7 +142,11 @@ StaffWidget::StaffWidget(QWidget* parent)
       m_currentTool(ToolType::Select),
       m_staffCount(1),
       m_dragging(false),
-      m_spacingK(0) {
+      m_spacingK(0),
+      m_cursorSlot(kDefaultTrebleClefSlot + 1),
+      m_cursorStaffIndex(0),
+      m_cursorStep(kStaffTopStep / 2),
+      m_cursorValid(false) {
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
 
@@ -323,8 +327,98 @@ void StaffWidget::deleteSelectedNote() {
 
 void StaffWidget::setSpacingCoefficient(int k) {
     m_spacingK = k;
+    clearSvgCache();  // Invalidate cache since dimensions changed
     updateGeometry();
     resize(sizeHint());
+    update();
+}
+
+void StaffWidget::addQuickSymbol(int digit) {
+    bool isRest = false;
+    Note::Duration noteDuration = Note::Duration::Undefined;
+    Note::Duration restDuration = Note::Duration::Undefined;
+
+    switch (digit) {
+    case 1:
+        noteDuration = Note::Duration::Whole;
+        break;
+    case 2:
+        noteDuration = Note::Duration::Half;
+        break;
+    case 3:
+        noteDuration = Note::Duration::Quarter;
+        break;
+    case 4:
+        noteDuration = Note::Duration::Eighth;
+        break;
+    case 5:
+        noteDuration = Note::Duration::Sixteenth;
+        break;
+    case 6:
+        isRest = true;
+        restDuration = Note::Duration::Whole;
+        break;
+    case 7:
+        isRest = true;
+        restDuration = Note::Duration::Half;
+        break;
+    case 8:
+        isRest = true;
+        restDuration = Note::Duration::Quarter;
+        break;
+    case 9:
+        isRest = true;
+        restDuration = Note::Duration::Eighth;
+        break;
+    case 0:
+        isRest = true;
+        restDuration = Note::Duration::Sixteenth;
+        break;
+    default:
+        return;
+    }
+
+    int targetStaffIndex = 0;
+    int insertSlot = kDefaultTrebleClefSlot + 1;
+    int step = kStaffTopStep / 2;
+    const int maxSlotAllowed = xToSlot(width() - kRightStaffBorder);
+
+    // Prefer current mouse position in widget (cursor), otherwise fallback to last known valid cursor.
+    QPoint globalPos = QCursor::pos();
+    QPoint localPos = mapFromGlobal(globalPos);
+
+    if (rect().contains(localPos)) {
+        const int cursorSlot = xToSlot(localPos.x());
+        const int cursorStaffIndex = yToStaffIndex(localPos.y());
+        const int cursorStep = yToStaffStep(cursorStaffIndex, localPos.y());
+
+        targetStaffIndex = qBound(0, cursorStaffIndex, m_staffCount - 1);
+        insertSlot = qBound(kDefaultTrebleClefSlot + 1, cursorSlot, maxSlotAllowed);
+        step = qBound(-ledgerLinesBorder(m_spacingK), cursorStep, kStaffTopStep + ledgerLinesBorder(m_spacingK));
+
+        m_cursorSlot = insertSlot;
+        m_cursorStaffIndex = targetStaffIndex;
+        m_cursorStep = step;
+        m_cursorValid = true;
+    } else if (m_cursorValid) {
+        targetStaffIndex = qBound(0, m_cursorStaffIndex, m_staffCount - 1);
+        insertSlot = qBound(kDefaultTrebleClefSlot + 1, m_cursorSlot, maxSlotAllowed);
+        step = qBound(-ledgerLinesBorder(m_spacingK), m_cursorStep, kStaffTopStep + ledgerLinesBorder(m_spacingK));
+    } else {
+        targetStaffIndex = 0;
+        insertSlot = kDefaultTrebleClefSlot + 1;
+        step = kStaffTopStep / 2;
+    }
+
+    step = qBound(-ledgerLinesBorder(m_spacingK), step, kStaffTopStep + ledgerLinesBorder(m_spacingK));
+
+    if (isRest) {
+        m_selectedSymbol = m_score.addGlyph(MusicSymbol::SymbolType::Rest, insertSlot, targetStaffIndex, step, restDuration);
+        m_selectedNote.reset();
+    } else {
+        m_selectedNote = m_score.addNote(insertSlot, targetStaffIndex, step, noteDuration);
+        m_selectedSymbol = m_selectedNote;
+    }
     update();
 }
 
@@ -399,6 +493,37 @@ void StaffWidget::addNoteFromMidi(int midiNote) {
     update();
 }
 
+QPixmap StaffWidget::getCachedSvgPixmap(const QString& svgPath, const QSizeF& size) {
+    // Create a unique key for this SVG + size combination
+    QString cacheKey = svgPath + ":" + QString::number(static_cast<int>(size.width())) 
+                      + "x" + QString::number(static_cast<int>(size.height()));
+    
+    auto it = m_svgCache.find(cacheKey);
+    if (it != m_svgCache.end()) {
+        return it->second;
+    }
+    
+    // Create pixmap and render SVG into it
+    QPixmap pixmap(static_cast<int>(size.width()), static_cast<int>(size.height()));
+    pixmap.fill(Qt::transparent);
+    
+    QPainter pixmapPainter(&pixmap);
+    pixmapPainter.setRenderHint(QPainter::Antialiasing, true);
+    QSvgRenderer renderer(svgPath);
+    if (renderer.isValid()) {
+        renderer.render(&pixmapPainter, QRectF(0, 0, size.width(), size.height()));
+    }
+    pixmapPainter.end();
+    
+    // Store in cache
+    m_svgCache[cacheKey] = pixmap;
+    return pixmap;
+}
+
+void StaffWidget::clearSvgCache() {
+    m_svgCache.clear();
+}
+
 void StaffWidget::paintEvent(QPaintEvent* event) {
     QPainter painter(this);
     render(painter, width(), height());
@@ -420,6 +545,12 @@ void StaffWidget::mousePressEvent(QMouseEvent* event) {
     const int insertSlot = qMin(qMax(slot, kDefaultTrebleClefSlot + 1), maxSlot);
     const int staffIndex = yToStaffIndex(event->position().y());
     const int step = qMin(qMax(yToStaffStep(staffIndex, event->position().y()), -ledgerLinesBorder(m_spacingK)), kStaffTopStep + ledgerLinesBorder(m_spacingK));
+
+    m_cursorSlot = insertSlot;
+    m_cursorStaffIndex = staffIndex;
+    m_cursorStep = step;
+    m_cursorValid = true;
+
     auto hitNote = m_score.noteAt(slot, staffIndex, step, 0, 1);
     auto hitGlyph = m_score.glyphAt(slot, staffIndex, step, 0, 1);
     auto hitBarLine = m_score.barLineAt(slot, staffIndex, 0);
@@ -670,16 +801,24 @@ void StaffWidget::mousePressEvent(QMouseEvent* event) {
 }
 
 void StaffWidget::mouseMoveEvent(QMouseEvent* event) {
+    // Update cursor-based position for quick keyboard insertion (even without click).
+    const int cursorSlot = xToSlot(event->position().x());
+    const int cursorStaffIndex = yToStaffIndex(event->position().y());
+    const int cursorStep = yToStaffStep(cursorStaffIndex, event->position().y());
+    const int maxSlot = xToSlot(width() - kRightStaffBorder);
+
+    m_cursorSlot = qBound(kDefaultTrebleClefSlot + 1, cursorSlot, maxSlot);
+    m_cursorStaffIndex = qBound(0, cursorStaffIndex, m_staffCount - 1);
+    m_cursorStep = qBound(-ledgerLinesBorder(m_spacingK), cursorStep, kStaffTopStep + ledgerLinesBorder(m_spacingK));
+    m_cursorValid = true;
+
     if (!m_dragging || !m_selectedSymbol || !(event->buttons() & Qt::LeftButton)) {
         QWidget::mouseMoveEvent(event);
         return;
     }
 
-    int newSlot = xToSlot(event->position().x());
-    newSlot = qMax(newSlot, kDefaultTrebleClefSlot + 1); // Prevent moving left of the clef
-    
+    int newSlot = m_cursorSlot;
     // Prevent moving past the right edge of the staff
-    const int maxSlot = xToSlot(width() - kRightStaffBorder);
     newSlot = qMin(newSlot, maxSlot);
 
     if (auto note = std::dynamic_pointer_cast<Note>(m_selectedSymbol)) {
@@ -731,6 +870,14 @@ void StaffWidget::keyPressEvent(QKeyEvent* event) {
         moveSelectedNoteRight();
         return;
     }
+
+    const QString keyText = event->text();
+    if (keyText.size() == 1 && keyText[0].isDigit()) {
+        const int n = keyText.toInt();
+        addQuickSymbol(n);
+        return;
+    }
+
     if (event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) {
         if (m_selectedNote) {
             deleteSelectedNote();
@@ -811,31 +958,36 @@ void StaffWidget::drawSymbols(QPainter& painter) {
                 y - rectH * yFactor,
                 kNoteWidth,
                 rectH);
-            const char* path = svgResourceForNoteDuration(note->duration());
-            QSvgRenderer renderer(QString::fromUtf8(path));
+            
             bool shouldFlip = (note->staffStep() > 4) && 
                                   (note->duration() != Note::Duration::Whole) && 
                                   (note->duration() != Note::Duration::Undefined);
-            if (renderer.isValid()) {
+            
+            const char* path = svgResourceForNoteDuration(note->duration());
+            QPixmap cachedPixmap = getCachedSvgPixmap(QString::fromUtf8(path), QSizeF(kNoteWidth, rectH));
+            
+            if (!cachedPixmap.isNull()) {
                 painter.save();
                 
                 if (shouldFlip) {
-
                     QPointF noteHeadCenter(x, y);
-                    
                     painter.translate(noteHeadCenter);
                     painter.scale(1, -1);
                     painter.translate(-noteHeadCenter);
-                    
                 }
-                painter.setClipRect(targetRect);
-                renderer.render(&painter, targetRect);
+                
+                painter.drawPixmap(QRect(static_cast<int>(targetRect.x()), 
+                                        static_cast<int>(targetRect.y()),
+                                        static_cast<int>(targetRect.width()),
+                                        static_cast<int>(targetRect.height())),
+                                  cachedPixmap);
                 painter.restore();
             } else {
                 painter.setPen(QPen(Qt::black, 2));
                 painter.setBrush(Qt::NoBrush);
                 painter.drawEllipse(targetRect);
             }
+            
             if (m_selectedSymbol == note) {
                 painter.setPen(QPen(QColor(20, 90, 220), 2, Qt::DashLine));
                 painter.setBrush(Qt::NoBrush);
@@ -905,12 +1057,14 @@ void StaffWidget::drawSymbols(QPainter& painter) {
             }
 
             if (path) {
-                QSvgRenderer renderer(QString::fromUtf8(path));
-                if (renderer.isValid()) {
-                    painter.save();
-                    painter.setClipRect(targetRect);
-                    renderer.render(&painter, targetRect);
-                    painter.restore();
+                QPixmap cachedPixmap = getCachedSvgPixmap(QString::fromUtf8(path), 
+                                                         QSizeF(targetRect.width(), targetRect.height()));
+                if (!cachedPixmap.isNull()) {
+                    painter.drawPixmap(QRect(static_cast<int>(targetRect.x()), 
+                                            static_cast<int>(targetRect.y()),
+                                            static_cast<int>(targetRect.width()),
+                                            static_cast<int>(targetRect.height())),
+                                      cachedPixmap);
                 }
             }
 

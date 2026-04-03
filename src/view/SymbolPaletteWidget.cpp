@@ -61,13 +61,13 @@ SymbolPaletteWidget::SymbolPaletteWidget(QWidget* parent)
 
     // ---- Accidentals & other ----
     const ToolButtonDef others[] = {
-        {"#",       "Sharp",                 ":/assets/svg/sharp.svg",             ToolType::InsertSharp},
-        {"b",       "Flat",                  ":/assets/svg/flat.svg",              ToolType::InsertFlat},
-        {"♮",       "Natural (Beccare)",     ":/assets/svg/beccare.svg",           ToolType::InsertBeccare},
-        {"|",       "Bar line",              nullptr,                              ToolType::InsertBarLine},
-        {"·",       "Dot",                   nullptr,                              ToolType::InsertDot},
+        {"diez",       "Sharp",                 ":/assets/svg/sharp.svg",             ToolType::InsertSharp},
+        {"bemol",       "Flat",                  ":/assets/svg/flat.svg",              ToolType::InsertFlat},
+        {"becare",       "Natural (Beccare)",     ":/assets/svg/beccare.svg",           ToolType::InsertBeccare},
+        {"barline",       "Bar line",              ":/assets/svg/barline.svg",                    ToolType::InsertBarLine},
+        {"dot",       "Dot for note",            ":/assets/svg/quarter_note_with_dot.svg", ToolType::InsertDot},
         {"4/4",     "Time signature",        nullptr,                              ToolType::InsertTimeSignature},
-        {"✕",       "Eraser",               nullptr,                              ToolType::Eraser},
+        {"eraser",       "Delete symbol",        ":/assets/svg/eraser.svg",          ToolType::Eraser},
     };
 
     // Helper: build a labeled group box with buttons
