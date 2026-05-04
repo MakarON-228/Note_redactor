@@ -65,6 +65,9 @@ private:
     Score m_score;
     std::shared_ptr<MusicSymbol> m_selectedSymbol;
     std::shared_ptr<Note> m_selectedNote;
+    QVector<std::shared_ptr<MusicSymbol>> m_selectedSymbols;
+    QRect m_selectionRect;
+    bool m_selecting;
     int m_staffCount;
     bool m_dragging;
     int m_spacingK;
