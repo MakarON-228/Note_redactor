@@ -1411,6 +1411,7 @@ void StaffWidget::drawSymbols(QPainter& painter) {
 
         auto dot = std::dynamic_pointer_cast<Dot>(symbol);
         if (dot) {
+            painter.save();
             QPen pen(Qt::black, 2);
             if (m_selectedSymbol == dot) {
                 pen.setColor(QColor(20, 90, 220));
@@ -1429,6 +1430,7 @@ void StaffWidget::drawSymbols(QPainter& painter) {
             painter.setBrush(QBrush(Qt::black, Qt::SolidPattern));
             painter.setPen(pen); 
             painter.drawEllipse(targetRect);
+            painter.restore();
             continue;
         }
 
